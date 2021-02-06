@@ -2,6 +2,7 @@
 class Bird {
   static GRAVITY = 0.3;
   static JUMP = -6;
+
   constructor(y) {
     this.y = y;
     this.speed = 0;
@@ -32,12 +33,13 @@ class Bird {
 class Pipe {
   static WIDTH = 50;
   static AISLE_HEIGHT = 130;
+
   constructor(rightX, canvasHeight) {
     this.rightX = rightX;
     this.topLen = (canvasHeight - Pipe.AISLE_HEIGHT) * Math.random();
   }
 
-  update(scoreIncreaseCallabck) {
+  update() {
     this.rightX -= 3;
   }
 
@@ -64,10 +66,9 @@ class Pipe {
 class FlappyGui {
   static BIRD_X = 150;
   static PIPE_INTERVAL = 200;
+
   constructor(canvas, images) {
-    this.backgroundSpeed = 0.3;
-    this.pipeHorizonSpace = 30;
-    this.pipeVertSapce = 30;
+    this.backgroundSpeed = 0.5;
 
     this.maxScore = 0;
     this.generation = 0;
@@ -85,7 +86,7 @@ class FlappyGui {
     this.step = 0;
     this.alive = birdsCount;
 
-    this.pipes.push(new Pipe(this.width - FlappyGui.PIPE_INTERVAL, this.height));
+    this.pipes.push(new Pipe(this.width, this.height));
     this.backgroundx = 0;
     for (var i = 0; i < birdsCount; i++) {
       this.birds.push(new Bird(this.height / 2));
@@ -112,12 +113,10 @@ class FlappyGui {
       this.pipes.push(new Pipe(nextPipeX + Pipe.WIDTH, this.height));
     }
     // updates birds
-    var nextHoll = 0;
     var nearPipe;
     for (var pipe of this.pipes) {
       if (pipe.rightX > FlappyGui.BIRD_X) {
         nearPipe = pipe;
-        nextHoll = pipe.topLen / this.height;
         break;
       }
     }
@@ -141,13 +140,14 @@ class FlappyGui {
       }
     }
     this.alive = aliveCount;
-    if (aliveCount == 0) {
+    if (aliveCount === 0) {
+      console.log("generation " + this.generation + " finished with score " + this.score);
       this.generation++;
       restartCallack(this.birds);
     }
     var self = this;
-    if (FPS == 0) {
-      window.setZeroTimeout(() => self.update(birdFlapFun, restartCallack));
+    if (FPS === 0) {
+      setZeroTimeout(() => self.update(birdFlapFun, restartCallack));
     } else {
       setTimeout(() => self.update(birdFlapFun, restartCallack), 1000 / FPS);
     }
@@ -175,10 +175,10 @@ class FlappyGui {
     }
     this.ctx.fillStyle = "white";
     this.ctx.font = "20px Oswald, sans-serif";
-    this.ctx.fillText("Score : " + this.score, 10, 25);
-    this.ctx.fillText("Max Score : " + this.maxScore, 10, 50);
-    this.ctx.fillText("Generation : " + this.generation, 10, 75);
-    this.ctx.fillText("Alive : " + this.alive + " / " + this.birds.length, 10, 100);
+    this.ctx.fillText("Generation : " + this.generation, 10, 25);
+    this.ctx.fillText("Score : " + this.score, 10, 50);
+    this.ctx.fillText("Max Score : " + this.maxScore, 10, 75);
+    this.ctx.fillText("Alive/Total : " + this.alive + " / " + this.birds.length, 10, 100);
 
     var self = this;
     requestAnimationFrame(() => self.render());
@@ -188,7 +188,6 @@ class FlappyGui {
 /*GAME**********************************************************************/
 class FlappyGame {
   constructor(conf, layoutCounts, canvas, images) {
-    this.autoMode = true;
     this.conf = conf;
     this.networks = [];
     this.gui = new FlappyGui(canvas, images);
@@ -198,10 +197,6 @@ class FlappyGame {
     }
   }
 
-  userMode() {
-    this.autoMode = false;
-  }
-
   start() {
     var self = this;
     this.gui.update((a, b) => self.birdNeedFlap(a, b), (s) => self.restart(s));
@@ -209,21 +204,12 @@ class FlappyGame {
   }
 
   birdNeedFlap(birdIndex, inputs) {
-    if (birdIndex == 0 && !this.autoMode) {
-      return false;
-    }
     return this.networks[birdIndex].compute(inputs)[0] > 0.5;
   }
 
   restart(birds) {
     this.gui.reset(this.conf.population);
     this.upgrade2nextGeneration(birds);
-  }
-
-  userBirdFlap() {
-    if (!this.autoMode) {
-      this.gui.birds[0].flap();
-    }
   }
 
   upgrade2nextGeneration(birds) {
@@ -240,7 +226,7 @@ class FlappyGame {
 }
 
 
-(function() {
+(function () {
   var timeouts = [];
   var messageName = "zero-timeout-message";
 
@@ -265,23 +251,12 @@ class FlappyGame {
 })();
 
 var FPS = 60;
-var game;
-var speed = function(fps) {
+var speed = function (fps) {
   FPS = parseInt(fps);
 };
-var keyFun = function(e) {
-  var code = e.keyCode;
-  //Up arrow pressed
-  if (code == 38) {
-    game.userBirdFlap();
-  }
-};
 
-window.addEventListener('keydown', keyFun, false);
-
-window.onload = function() {
-  var conf = new GeneticConf({ population: 20, generateChildCount: 3 });
-  document.getElementById("test").innerHTML = JSON.stringify(conf);
+window.onload = function () {
+  var conf = new GeneticConf({population: 20, generateChildCount: 3});
   var canvas = document.getElementById("flappy");
   var imageSrc = {
     bird: "./img/bird.png",
@@ -296,10 +271,10 @@ window.onload = function() {
     nb++;
     images[name] = new Image();
     images[name].src = imageSrc[name];
-    images[name].onload = function() {
+    images[name].onload = function () {
       loaded++;
-      if (nb == loaded) {
-        game = new FlappyGame(conf, [3, 2, 1], canvas, images);
+      if (nb === loaded) {
+        var game = new FlappyGame(conf, [3, 2, 1], canvas, images);
         //game.userMode();
         game.start();
       }
